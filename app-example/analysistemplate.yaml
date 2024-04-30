@@ -1,0 +1,15 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: app-example-error-rate
+spec:
+  metrics:
+    - name: error-rate
+      interval: 30s
+      failureCondition: result[0] >= 0.09
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus-service.prometheus:9090
+          query: |
+            sum(rate(traefik_service_requests_total{code=~"[4-5].*", service=~"app-example-app.*"}[1m])) / sum(rate(traefik_service_requests_total{service=~"app-example-app.*"}[1m]))

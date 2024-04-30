@@ -1,0 +1,76 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: app-example-rollout
+spec:
+  strategy:
+    canary:
+      analysis:
+        templates:
+        - templateName: app-example-error-rate
+        startingStep: 1
+        args:
+        - name: service-name
+          value: app-example-svc.app-example
+      steps:
+        - setWeight: 20
+        - pause: { duration: 60 }
+        - setWeight: 40
+        - pause: { duration: 60 }
+        - setWeight: 60
+        - pause: { duration: 60 }
+        - setWeight: 80
+        - pause: { duration: 60 }
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: app-example
+      app.kubernetes.io/name: app-example-release
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels:
+        app.kubernetes.io/component: app-example
+        app.kubernetes.io/name: app-example-release
+    spec:
+      containers:
+        - name: app-example
+          image: ricardotjr/app-example:1.0.0
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: APP_ERROR_RATE
+              value: "9.95"
+          readinessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 2
+            successThreshold: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 2
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 64Mi

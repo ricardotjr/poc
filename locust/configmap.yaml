@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: locust-conf
+  labels:
+    name: locust-conf
+data:
+  locust.conf: |-
+    locustfile = /locust/locustfile.py
+    host = http://app.example.io
+    users = 50
+    expect-workers = 10
+    spawn-rate = 10
+    run-time = 1h
+
+  locustfile.py: |-
+    from locust import HttpUser, task, between
+
+    class Test(HttpUser):
+      wait_time = between(0, 2)
+
+      @task
+      def version(self):
+          response = self.client.get("/fibonacci")
+          if response.status_code != 200:
+              raise Exception()
+    
